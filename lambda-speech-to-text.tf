@@ -1,6 +1,6 @@
 resource "aws_lambda_function" "speech_to_text" {
   filename = "./src/speech-to-text.zip"
-  source_code_hash = filebase64sha256("./src/lambda-invoker.zip")
+  source_code_hash = filebase64sha256("./src/speech-to-text.zip")
   function_name = "speech-to-text"
   role          = aws_iam_role.iam_for_lambda_invoker.arn
   handler       = "speech-to-text.lambda_handler"

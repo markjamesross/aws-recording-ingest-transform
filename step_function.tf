@@ -10,6 +10,16 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "Transcribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.speech_to_text.arn}",
+      "Next": "Wait"
+    },
+    "Wait": {
+    "Type": "Wait",
+    "Seconds": 10,
+    "Next": "CheckTranscribe"
+    },
+    "CheckTranscribe": {
+      "Type": "Task",
+      "Resource": "${aws_lambda_function.check_status.arn}",
       "End": true
     }
   }
@@ -78,7 +88,7 @@ data "aws_iam_policy_document" "state_lambda_invoke" {
     ]
 
     resources = [
-      "${aws_lambda_function.speech_to_text.arn}",
+      "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*",
       "arn:aws:transcribe:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
     ]
   }
