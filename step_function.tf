@@ -20,7 +20,22 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "CheckTranscribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.check_status.arn}",
-      "End": true
+      "ResultPath": "$.CheckTranscribe",
+      "Next": "TranscirbeComplete?"
+    },
+    "TranscirbeComplete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.CheckTranscribe.input.CheckTranscribe.TranscriptionJobStatus",
+          "StringEquals": "Complete",
+          "Next": "Complete"
+        }
+      ],
+      "Default": "Wait"
+    },
+    "Complete": {
+      "Type": "Succeed"
     }
   }
 }
