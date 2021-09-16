@@ -9,28 +9,28 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
   "States": {
     "Transcribe": {
       "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_invoker.arn}",
-      "Next": "Translate"
-    },
-    "Translate": {
-      "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_invoker.arn}",
-      "Next": "Comprehend"
-    },
-    "Comprehend": {
-      "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_invoker.arn}",
-      "Next": "Polly"
-    },
-    "Polly": {
-      "Type": "Task",
-      "Resource": "${aws_lambda_function.lambda_invoker.arn}",
+      "Resource": "${aws_lambda_function.speech_to_text.arn}",
       "End": true
     }
   }
 }
 EOF
-
+/*,
+    "Translate": {
+      "Type": "Task",
+      "Resource": "",
+      "Next": "Comprehend"
+    },
+    "Comprehend": {
+      "Type": "Task",
+      "Resource": "",
+      "Next": "Polly"
+    },
+    "Polly": {
+      "Type": "Task",
+      "Resource": "",
+      "End": true
+    }*/
 #  logging_configuration {
 #    log_destination        = "${aws_cloudwatch_log_group.workflow_step_function.arn}:*"
 #    include_execution_data = true
@@ -66,4 +66,33 @@ resource "aws_iam_role_policy_attachment" "basic_step_function" {
 resource "aws_cloudwatch_log_group" "workflow_step_function" {
   name              = "/aws/states/workflow-step-function"
   retention_in_days = 14
+}
+
+data "aws_iam_policy_document" "state_lambda_invoke" {
+  statement {
+    sid = "1"
+
+    actions = [
+      "lambda:InvokeFunction",
+      "transcribe:*",
+    ]
+
+    resources = [
+      "${aws_lambda_function.speech_to_text.arn}",
+      "arn:aws:transcribe:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "state_lambda_invoke" {
+  name        = "state-lambda-invoke"
+  path        = "/"
+  description = "Policy to allow step function to invoke Lambdas"
+
+  policy = data.aws_iam_policy_document.state_lambda_invoke.json
+}
+
+resource "aws_iam_role_policy_attachment" "state_lambda_invoke" {
+  policy_arn = aws_iam_policy.state_lambda_invoke.arn
+  role       = aws_iam_role.iam_for_step_function.name
 }

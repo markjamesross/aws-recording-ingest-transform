@@ -1,13 +1,13 @@
 resource "aws_lambda_function" "lambda_invoker" {
   filename = "./src/lambda-invoker.zip"
-  #source_code_hash = filebase64sha256("./src/lambda-invoker.zip")
+  source_code_hash = filebase64sha256("./src/lambda-invoker.zip")
   function_name = "lambda-invoker"
   role          = aws_iam_role.iam_for_lambda_invoker.arn
   handler       = "lambda-invoker.lambda_handler"
   runtime       = "python3.8"
   environment {
     variables = {
-      STEP_FUNCTION_ARN = "10"
+      STEP_FUNCTION_ARN = aws_sfn_state_machine.workflow_step_function.arn
     }
   }
   tags = merge({ Name = "lambda-invoker" }, var.tags)
@@ -39,7 +39,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "basic_lambda_invoker" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  policy_arn =  "arn:aws:iam::aws:policy/AWSLambdaExecute"
   role       = aws_iam_role.iam_for_lambda_invoker.name
 }
 
@@ -49,7 +49,7 @@ resource "aws_iam_role_policy_attachment" "stepfunctions" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_invoker" {
-  name              = "/aws/lambda/iam-for-lambda-invoker"
+  name              = "/aws/lambda/lambda-invoker"
   retention_in_days = 14
 }
 
@@ -59,4 +59,8 @@ resource "aws_lambda_permission" "allow_s3_invoke" {
   function_name = aws_lambda_function.lambda_invoker.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.upload.arn
+}
+resource "aws_iam_role_policy_attachment" "lambda_lambda_invoke" {
+  policy_arn = aws_iam_policy.state_lambda_invoke.arn
+  role       = aws_iam_role.iam_for_lambda_invoker.name
 }
