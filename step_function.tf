@@ -14,20 +14,54 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     },
     "Wait": {
     "Type": "Wait",
-    "Seconds": 10,
+    "Seconds": 30,
     "Next": "CheckTranscribe"
     },
     "CheckTranscribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.check_status.arn}",
-      "ResultPath": "$.CheckTranscribe",
-      "Next": "TranscirbeComplete?"
+      "Next": "Parrallel"
     },
-    "TranscirbeComplete?": {
+    "Parrallel": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "Comprehend",
+          "States": {
+            "Comprehend": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.comprehend.arn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Translate",
+          "States": {
+            "Translate": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.translate.arn}",
+              "Next" : "Polly"
+            },
+            "Polly": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.translate.arn}",
+              "End": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+EOF
+/*
+    "TranscribeComplete?": {
       "Type": "Choice",
       "Choices": [
         {
-          "Variable": "$.CheckTranscribe.input.CheckTranscribe.TranscriptionJobStatus",
+          "Variable": "$.input.Transcribe.TranscriptionJob.TranscriptionJobStatus",
           "StringEquals": "Complete",
           "Next": "Complete"
         }
@@ -37,10 +71,7 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "Complete": {
       "Type": "Succeed"
     }
-  }
-}
-EOF
-/*,
+,
     "Translate": {
       "Type": "Task",
       "Resource": "",
