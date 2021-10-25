@@ -54,6 +54,40 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
               "Type": "Task",
               "Resource": "${aws_lambda_function.comprehend.arn}",
               "End": true
+            },
+            "WaitForComprehend": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "CheckComprehend"
+            },
+            "CheckComprehend": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.comprehend_check_status.arn}",
+              "Next": "ComprehendComplete?"
+            },
+            "ComprehendComplete?" : {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.comprehendJobStatus",
+                  "StringEquals": "FAILED",
+                  "Next": "ComprehendJobFailed"
+                },
+                {
+                  "Variable": "$.comprehendJobStatus",
+                  "StringEquals": "COMPLETED",
+                  "Next": "ComprehendComplete"
+                }
+              ],
+              "Default": "WaitForComprehend"
+            },
+            "ComprehendJobFailed": {
+              "Type": "Fail",
+              "Cause": "Job Failed",
+              "Error": "Comprehend job failed"
+            },
+            "ComprehendComplete": {
+              "Type": "Succeed"
             }
           }
         },
