@@ -13,7 +13,7 @@ def lambda_handler(event, context):
 
     content = f's3://{s3_bucket}/{s3_key}'
     jobName = f'{s3_key}'
-    transcript = f'{s3_key}/textract/transcript.json'
+    transcript = f'{s3_key}/transcript_raw/transcript.json'
 
     #Perform transcription
     response = transcribe.start_transcription_job(
@@ -25,7 +25,6 @@ def lambda_handler(event, context):
     )
 
     #Pass details to state
-    event['textract'] = transcript
-    event['textractJobName'] = response['TranscriptionJob']['TranscriptionJobName']
+    event['transcript'] = transcript
 
     return event

@@ -9,7 +9,6 @@ def lambda_handler(event, context):
     print("Received event: " + json.dumps(event))
     s3_bucket = os.environ['OUTPUT_BUCKET']
     s3_key = event['s3_key']
-    transcript_key = event['textract']
 
     content = f's3://{s3_bucket}/{s3_key}/transcript'
     jobName = f'{s3_key}'
