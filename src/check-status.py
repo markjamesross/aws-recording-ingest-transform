@@ -5,12 +5,12 @@ transcribe = boto3.client('transcribe')
 
 def lambda_handler(event, context):
     print("Received event: " + json.dumps(event))
-    transcriptionJobName = event['TranscriptionJobName']
+    textractJobName = event['textractJobName']
 
     response = transcribe.get_transcription_job(
-        TranscriptionJobName=transcriptionJobName
+        TranscriptionJobName=textractJobName
     )
 
-    event['TranscriptionJobStatus'] = response['TranscriptionJob']['TranscriptionJobStatus']
+    event['textractJobStatus'] = response['TranscriptionJob']['TranscriptionJobStatus']
 
     return event

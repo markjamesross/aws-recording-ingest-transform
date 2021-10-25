@@ -20,6 +20,11 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "CheckTranscribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.check_status.arn}",
+      "Next": "ExtractText"
+    },
+    "ExtractText": {
+      "Type": "Task",
+      "Resource": "${aws_lambda_function.extract_text.arn}",
       "Next": "Parrallel"
     },
     "Parrallel": {
@@ -42,11 +47,16 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
             "Translate": {
               "Type": "Task",
               "Resource": "${aws_lambda_function.translate.arn}",
-              "Next" : "Polly"
+              "Next" : "Wait_for_Translate"
+            },
+            "Wait_for_Translate": {
+              "Type": "Wait",
+              "Seconds": 1200,
+              "Next": "Polly"
             },
             "Polly": {
               "Type": "Task",
-              "Resource": "${aws_lambda_function.translate.arn}",
+              "Resource": "${aws_lambda_function.polly.arn}",
               "End": true
             }
           }

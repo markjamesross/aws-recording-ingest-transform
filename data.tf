@@ -18,4 +18,17 @@ data "aws_iam_policy_document" "lambda_invoker" {
 
     effect = "Allow"
   }
+  statement {
+    sid = "DeleteS3"
+
+    actions = [
+      "s3:DeleteObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.processed.arn}/*",
+    ]
+
+    effect = "Allow"
+  }
 }

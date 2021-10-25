@@ -75,6 +75,11 @@ resource "aws_iam_role_policy_attachment" "comprehend_lambda_invoke" {
   role       = aws_iam_role.iam_for_lambda_invoker.name
 }
 
+resource "aws_iam_role_policy_attachment" "polly_lambda_invoke" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonPollyFullAccess"
+  role       = aws_iam_role.iam_for_lambda_invoker.name
+}
+
 resource "aws_iam_policy" "lambda_invoker" {
   name        = "lambda-invoker-custom-policy"
   path        = "/"
