@@ -10,17 +10,33 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "Transcribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.speech_to_text.arn}",
-      "Next": "Wait"
+      "Next": "WaitForTranscribe"
     },
-    "Wait": {
-    "Type": "Wait",
-    "Seconds": 30,
-    "Next": "CheckTranscribe"
+    "WaitForTranscribe": {
+      "Type": "Wait",
+      "Seconds": 10,
+      "Next": "CheckTranscribe"
     },
     "CheckTranscribe": {
       "Type": "Task",
-      "Resource": "${aws_lambda_function.check_status.arn}",
-      "Next": "ExtractText"
+      "Resource": "${aws_lambda_function.transcribe_check_status.arn}",
+      "Next": "TranscribeComplete?"
+    },
+    "TranscribeComplete?" : {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.transcriptJobStatus",
+          "StringEquals": "FAILED",
+          "Next": "TranscribeJobFailed"
+        },
+        {
+          "Variable": "$.transcriptJobStatus",
+          "StringEquals": "COMPLETED",
+          "Next": "ExtractText"
+        }
+      ],
+      "Default": "WaitForTranscribe"
     },
     "ExtractText": {
       "Type": "Task",
@@ -62,6 +78,11 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
           }
         }
       ]
+    },
+    "TranscribeJobFailed": {
+      "Type": "Fail",
+      "Cause": "Job Failed",
+      "Error": "Transcribe job failed"
     }
   }
 }
