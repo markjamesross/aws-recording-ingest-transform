@@ -11,7 +11,7 @@ Uploading a file to S3 triggers a step function to: -
 
 # Pre-reqs
 Run code from Linux machine (tested with Centos)
-Terraform (greater than v1.0)
+Terraform
 AWS account with sufficient priveleges to deploy resources
 
 # Deployment instructions
