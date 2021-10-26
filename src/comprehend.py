@@ -33,6 +33,6 @@ def lambda_handler(event, context):
 
     #Pass details to state
     event['comprehend'] = comprehension
-    event['ComprehendJobId'] = response['JobId']
+    event['comprehendJobId'] = response['JobId']
 
     return event

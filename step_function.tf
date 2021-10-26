@@ -10,17 +10,33 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
     "Transcribe": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.speech_to_text.arn}",
-      "Next": "Wait"
+      "Next": "WaitForTranscribe"
     },
-    "Wait": {
-    "Type": "Wait",
-    "Seconds": 30,
-    "Next": "CheckTranscribe"
+    "WaitForTranscribe": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "CheckTranscribe"
     },
     "CheckTranscribe": {
       "Type": "Task",
-      "Resource": "${aws_lambda_function.check_status.arn}",
-      "Next": "ExtractText"
+      "Resource": "${aws_lambda_function.transcribe_check_status.arn}",
+      "Next": "TranscribeComplete?"
+    },
+    "TranscribeComplete?" : {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.transcriptJobStatus",
+          "StringEquals": "FAILED",
+          "Next": "TranscribeJobFailed"
+        },
+        {
+          "Variable": "$.transcriptJobStatus",
+          "StringEquals": "COMPLETED",
+          "Next": "ExtractText"
+        }
+      ],
+      "Default": "WaitForTranscribe"
     },
     "ExtractText": {
       "Type": "Task",
@@ -37,7 +53,41 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
             "Comprehend": {
               "Type": "Task",
               "Resource": "${aws_lambda_function.comprehend.arn}",
-              "End": true
+              "Next": "WaitForComprehend"
+            },
+            "WaitForComprehend": {
+              "Type": "Wait",
+              "Seconds": 60,
+              "Next": "CheckComprehend"
+            },
+            "CheckComprehend": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.comprehend_check_status.arn}",
+              "Next": "ComprehendComplete?"
+            },
+            "ComprehendComplete?" : {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.comprehendJobStatus",
+                  "StringEquals": "FAILED",
+                  "Next": "ComprehendJobFailed"
+                },
+                {
+                  "Variable": "$.comprehendJobStatus",
+                  "StringEquals": "COMPLETED",
+                  "Next": "ComprehendComplete"
+                }
+              ],
+              "Default": "WaitForComprehend"
+            },
+            "ComprehendJobFailed": {
+              "Type": "Fail",
+              "Cause": "Job Failed",
+              "Error": "Comprehend job failed"
+            },
+            "ComprehendComplete": {
+              "Type": "Succeed"
             }
           }
         },
@@ -47,61 +97,90 @@ resource "aws_sfn_state_machine" "workflow_step_function" {
             "Translate": {
               "Type": "Task",
               "Resource": "${aws_lambda_function.translate.arn}",
-              "Next" : "Wait_for_Translate"
+              "Next" : "WaitforTranslate"
             },
-            "Wait_for_Translate": {
+            "WaitforTranslate": {
               "Type": "Wait",
-              "Seconds": 1200,
-              "Next": "Polly"
+              "Seconds": 60,
+              "Next": "CheckTranslate"
+            },
+            "CheckTranslate": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.translate_check_status.arn}",
+              "Next": "TranslateComplete?"
+            },
+            "TranslateComplete?" : {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.translateJobStatus",
+                  "StringEquals": "FAILED",
+                  "Next": "TranslateJobFailed"
+                },
+                {
+                  "Variable": "$.translateJobStatus",
+                  "StringEquals": "COMPLETED",
+                  "Next": "Polly"
+                }
+              ],
+              "Default": "WaitforTranslate"
+            },
+            "TranslateJobFailed": {
+              "Type": "Fail",
+              "Cause": "Job Failed",
+              "Error": "Translate job failed"
             },
             "Polly": {
               "Type": "Task",
               "Resource": "${aws_lambda_function.polly.arn}",
-              "End": true
+              "Next": "WaitforPolly"
+            },
+            "WaitforPolly": {
+              "Type": "Wait",
+              "Seconds": 60,
+              "Next": "CheckPolly"
+            },
+            "CheckPolly": {
+              "Type": "Task",
+              "Resource": "${aws_lambda_function.polly_check_status.arn}",
+              "Next": "PollyComplete?"
+            },
+            "PollyComplete?" : {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.pollyJobStatus",
+                  "StringEquals": "failed",
+                  "Next": "PollyJobFailed"
+                },
+                {
+                  "Variable": "$.pollyJobStatus",
+                  "StringEquals": "completed",
+                  "Next": "PollyComplete"
+                }
+              ],
+              "Default": "WaitforPolly"
+            },
+            "PollyJobFailed": {
+              "Type": "Fail",
+              "Cause": "Job Failed",
+              "Error": "Polly job failed"
+            },
+            "PollyComplete": {
+              "Type": "Succeed"
             }
           }
         }
       ]
+    },
+    "TranscribeJobFailed": {
+      "Type": "Fail",
+      "Cause": "Job Failed",
+      "Error": "Transcribe job failed"
     }
   }
 }
 EOF
-/*
-    "TranscribeComplete?": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.input.Transcribe.TranscriptionJob.TranscriptionJobStatus",
-          "StringEquals": "Complete",
-          "Next": "Complete"
-        }
-      ],
-      "Default": "Wait"
-    },
-    "Complete": {
-      "Type": "Succeed"
-    }
-,
-    "Translate": {
-      "Type": "Task",
-      "Resource": "",
-      "Next": "Comprehend"
-    },
-    "Comprehend": {
-      "Type": "Task",
-      "Resource": "",
-      "Next": "Polly"
-    },
-    "Polly": {
-      "Type": "Task",
-      "Resource": "",
-      "End": true
-    }*/
-#  logging_configuration {
-#    log_destination        = "${aws_cloudwatch_log_group.workflow_step_function.arn}:*"
-#    include_execution_data = true
-#    level                  = "ERROR"
-#  }
 }
 
 resource "aws_iam_role" "iam_for_step_function" {

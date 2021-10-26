@@ -37,6 +37,6 @@ def lambda_handler(event, context):
 
     #Pass details to state
     event['translate'] = translation
-    event['TranslateJobId'] = response['JobId']
+    event['translateJobId'] = response['JobId']
 
     return event
