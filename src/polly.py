@@ -9,7 +9,7 @@ def lambda_handler(event, context):
     print("Received event: " + json.dumps(event))
     s3_bucket = event['s3_bucket']
     s3_key = event['s3_key']
-    translate_job_id = event['TranslateJobId']
+    translate_job_id = event['translateJobId']
     outputS3 = os.environ['OUTPUT_BUCKET']
     accountId = os.environ['ACCOUNT_ID']
 
@@ -32,6 +32,7 @@ def lambda_handler(event, context):
 
     #Pass details to state
     event['polly'] = speech
-    event['PollyOutputUri'] = response['SynthesisTask']['OutputUri']
+    event['pollyOutputUri'] = response['SynthesisTask']['OutputUri']
+    event['pollyTaskId'] = response['SynthesisTask']['TaskId']
 
     return event
